@@ -1,36 +1,27 @@
 from django.urls import include, path
+from rest_framework.routers import SimpleRouter
 
-from . import views
+from . import permissions, views
+
 
 app_name = 'users'
 
+router = SimpleRouter()
+router.register(r'users', views.FoodgramUserViewSet)
+
 urlpatterns = [
-    # path(
-    #     'users/',
-    #     views.UsersViewSet.as_view({'get': 'list', 'post': 'create'}),
-    #     name='users'
-    # ),
-    # path(
-    #     'users/<int:pk>/',
-    #     views.UsersViewSet.as_view({'get': 'retrieve'}),
-    #     name='user-detail'
-    # ),
-    # path(
-    #     'users/me/',
-    #     views.UserSelfView.as_view({'get': 'retrieve'}),
-    #     name='user-me'
-    # ),
-    # path(
-    #     'users/me/avatar/',
-    #     views.UserAvatarViewSet.as_view({'put': 'update',
-    #                                      'delete': 'destroy'}),
-    #     name='user-avatar'
-    # ),
-    # path(
-    #     'users/set_password/',
-    #     views.UpdatePasswordView.as_view(),
-    #     name='user-set-password'
-    # ),
+    path(
+        'users/me/avatar/', views.UserAvatarViewSet.as_view({
+            'put': 'update',
+            'delete': 'destroy'
+        })
+    ),
+    path(
+        'users/subscriptions/', views.GetSubscribersViewSet.as_view({
+            'get': 'list'
+        })
+    ),
+    path('', include(router.urls)),
     path('', include('djoser.urls')),
     path('auth/', include('djoser.urls.authtoken')),
 ]

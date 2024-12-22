@@ -1,88 +1,48 @@
 import base64
-import re
 
 from django.contrib.auth import get_user_model
-from django.contrib.auth.hashers import make_password, check_password
 from django.core.files.base import ContentFile
+from djoser.serializers import UserCreateSerializer, UserSerializer
 from rest_framework import serializers
+
+from .models import Subscribe
+from recipes.models import Recipe
+from recipes.serializers import AddRecipeSerializer
+
+from rest_framework.exceptions import APIException
+from rest_framework import status
 
 User = get_user_model()
 
 
-class UserCreateSerializer(serializers.ModelSerializer):
-    """Сериализатор создания нового пользователя."""
-
-    class Meta:
-        model = User
-        fields = (
-            'username', 'email', 'first_name', 'last_name', 'password'
-        )
-
-    def validate(self, data):
-        """Валидация запроса на регистрацию пользователя."""
-
-        required_fields = [
-            'username', 'email', 'first_name', 'last_name', 'password'
-        ]
-        for field in required_fields:
-            if field not in data:
-                raise serializers.ValidationError(
-                    f'Поле {field} не может быть пустым!'
-                )
-
-        if not re.match(r'^[\w.@+-]+\Z', data['username']):
-            raise serializers.ValidationError(
-                'В поле username могут быть использованы цифры, буквы, ',
-                'нижнее подчеркивание, знаки минуса или плюса.'
-            )
-
-        if data['username'] == 'me':
-            raise serializers.ValidationError(
-                'Нельзя использовать "me" в качестве имени!'
-            )
-
-        user_email = User.objects.filter(email=data['email']).first()
-        user_username = User.objects.filter(username=data['username']).first()
-
-        if user_email and user_email.username != data['username']:
-            raise serializers.ValidationError(
-                'Пользователь с таким email уже зарегестрирован!'
-            )
-
-        if user_username and user_username.email != data['email']:
-            raise serializers.ValidationError(
-                'Пользователь с таким именем уже зарегестрирован!'
-            )
-
-        data['password'] = make_password(data['password'])
-
-        return data
-
-    def to_representation(self, instance):
-        return {
-            "email": instance.email,
-            "id": instance.id,
-            "username": instance.username,
-            "first_name": instance.first_name,
-            "last_name": instance.last_name
-        }
+class BadRequest(APIException):
+    """Возвращает статус-код 400."""
+    default_detail = '400 Bad Request'
+    default_code = 'bad_request'
+    status_code = status.HTTP_400_BAD_REQUEST
 
 
-class UserSerializer(serializers.ModelSerializer):
-    """Сериализатор GET запросов к модели пользователя."""
-    is_subscribed = serializers.BooleanField(default=False)
+class UserCreationSerializer(UserCreateSerializer):
+    """Кастомизация сериализатора регистрации пользователя."""
+    first_name = serializers.CharField(max_length=150)
+    last_name = serializers.CharField(max_length=150)
 
-    class Meta:
-        model = User
-        fields = (
-            'username', 'email', 'first_name', 'last_name', 'avatar',
-            'is_subscribed'
-        )
-        ordering = ('username')
 
-    def get_is_subscribed(self, obj):
-        """Получение состояния Подписки на автора."""
-        return obj.is_subscribed
+class FoodgramUserSerializer(UserSerializer):
+    """Кастомизация сериализатора модели Пользователя."""
+    is_subscribed = serializers.BooleanField(read_only=True)
+    avatar = serializers.SerializerMethodField(read_only=True)
+
+    class Meta(UserSerializer.Meta):
+        fields = ('id', 'email', 'username', 'first_name', 'last_name',
+                  'is_subscribed', 'avatar')
+
+    def get_avatar(self, obj):
+        """Возвращает абсолютную ссылку на аватар."""
+        request = self.context.get('request')
+        if obj.avatar:
+            return request.build_absolute_uri(obj.avatar.url)
+        return None
 
 
 class Base64ImageField(serializers.ImageField):
@@ -106,21 +66,11 @@ class UserAvatarSerializer(serializers.ModelSerializer):
         model = User
         fields = ('avatar',)
 
-    def validate(self, data):
-        """Валидация запроса на обновление Аватара."""
-        if 'avatar' not in data:
-            raise serializers.ValidationError(
-                'Изображение не загружено.'
-            )
-
-        return data
-
-    def to_representation(self, instance):
-        """Замена base64 кода на абсолютную ссылку в данных Аватара."""
-        data = super().to_representation(instance)
-        if instance.avatar:
-            data['avatar'] = instance.avatar.url
-        return data
+    def update(self, instance, validated_data):
+        if 'avatar' in validated_data:
+            instance.avatar = validated_data['avatar']
+            instance.save()
+        return instance
 
     def delete_avatar(self, instance):
         """Удаление аватара."""
@@ -129,28 +79,49 @@ class UserAvatarSerializer(serializers.ModelSerializer):
         instance.save()
 
 
-class ChangePasswordSerializer(serializers.Serializer):
-    """Сериализатор запроса на изменение пароля."""
-    new_password = serializers.CharField()
-    current_password = serializers.CharField()
+class SubscribeUserSerializer(FoodgramUserSerializer):
+    """Сериализатор запросов на подписку на автора."""
+    recipes = serializers.SerializerMethodField()
+    recipes_count = serializers.SerializerMethodField()
 
-    def get_user(self):
-        """Извлечение объекта пользователя."""
-        return self.context['request'].user
+    class Meta:
+        model = User
+        fields = ('id', 'email', 'username', 'first_name',
+                  'last_name', 'is_subscribed', 'avatar',
+                  'recipes', 'recipes_count')
+        read_only_fields = ('id', 'email', 'username', 'first_name',
+                            'last_name', 'is_subscribed', 'avatar',
+                            'recipes', 'recipes_count')
 
     def validate(self, data):
-        """Валидация запроса на изменение пароля."""
-
-        if not check_password(data['current_password'],
-                              self.get_user().password):
-            raise serializers.ValidationError(
-                'Пароль указан неверно.'
-            )
-
+        """Валидация запроса на подписку."""
+        author = self.context.get('author')
+        user = self.context.get('request').user
+        if user == author:
+            raise BadRequest
+        if Subscribe.objects.filter(user=user, subscribing=author).exists():
+            raise BadRequest
         return data
 
-    def save(self):
-        """Сохранение нового пароля."""
-        user = self.get_user()
-        user.set_password(self.validated_data['new_password'])
-        user.save()
+    def get_author_recipes(self, author):
+        """Выборка рецептов Автора."""
+        return Recipe.objects.filter(author=author)
+
+    def get_recipes(self, author):
+        """Получение списка рецептов Пользователя."""
+        request = self.context.get('request')
+        recipes_limit = request.query_params.get('recipes_limit')
+
+        if recipes_limit:
+            recipes_limit = int(recipes_limit)
+        recipes = self.get_author_recipes(author)[:recipes_limit]
+
+        return AddRecipeSerializer(
+            recipes,
+            many=True,
+            context={'request': request},
+        ).data
+
+    def get_recipes_count(self, author):
+        """Подсчет количества рецептов Автора."""
+        return self.get_author_recipes(author).count()

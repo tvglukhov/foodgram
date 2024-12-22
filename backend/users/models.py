@@ -4,7 +4,10 @@ from django.db import models
 
 class FoodgramUser(AbstractUser):
     """Модель пользователя Фудграм."""
-    avatar = models.URLField(blank=True)
+    avatar = models.ImageField(
+        upload_to='users/avatars/',
+        blank=True
+    )
     email = models.EmailField(unique=True)
 
     USERNAME_FIELD = 'email'
@@ -14,7 +17,7 @@ class FoodgramUser(AbstractUser):
     @property
     def is_subscribed(self):
         """Возвращает True, если пользователь подписан на этого автора."""
-        return self.subscribers.filter(subscribing=self).exists()
+        return self.subscribtions.filter(subscribing=self).exists()
 
 
 class Subscribe(models.Model):
