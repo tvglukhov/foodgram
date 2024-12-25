@@ -3,8 +3,6 @@ from django.shortcuts import get_object_or_404
 from djoser.views import UserViewSet
 from rest_framework import mixins, status, viewsets
 from rest_framework.decorators import action
-from rest_framework.pagination import (LimitOffsetPagination,
-                                       PageNumberPagination)
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
@@ -75,7 +73,6 @@ class GetSubscribersViewSet(mixins.ListModelMixin,
                             viewsets.GenericViewSet):
     """Вью для получения списка пользователей."""
     serializer_class = SubscribeUserSerializer
-    # pagination_class = PageNumberPagination
     permission_classes = (IsAuthenticated,)
 
     def get_queryset(self):

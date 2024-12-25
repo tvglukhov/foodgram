@@ -3,14 +3,13 @@ import base64
 from django.contrib.auth import get_user_model
 from django.core.files.base import ContentFile
 from djoser.serializers import UserCreateSerializer, UserSerializer
-from rest_framework import serializers
+from rest_framework import serializers, status
+from rest_framework.exceptions import APIException
 
 from .models import Subscribe
 from recipes.models import Recipe
 from recipes.serializers import AddRecipeSerializer
 
-from rest_framework.exceptions import APIException
-from rest_framework import status
 
 User = get_user_model()
 

@@ -8,7 +8,9 @@ app_name = 'recipes'
 
 router = SimpleRouter()
 router.register('recipes', views.RecipeViewSet, basename='recipes')
-router.register('ingredients', views.IngridientsViewSet, basename='ingredients')
+router.register('ingredients',
+                views.IngridientsViewSet,
+                basename='ingredients')
 router.register('tags', views.TagsViewSet, basename='tags')
 
 urlpatterns = [

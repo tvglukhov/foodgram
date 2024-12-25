@@ -5,14 +5,10 @@ from django_filters import (AllValuesMultipleFilter,
                             ModelChoiceFilter)
 from rest_framework import filters
 
+from .constants import RECIPE_IS_IN
 from .models import Recipe
 
 User = get_user_model()
-
-RECIPE_STATUS_CHOICES = (
-    (0, 'not_is_in'),
-    (1, 'is_in'),
-)
 
 
 class FirstLetterFilter(filters.BaseFilterBackend):
@@ -37,11 +33,11 @@ class RecipeFilter(FilterSet):
     )
 
     is_in_shopping_cart = ChoiceFilter(
-        choices=RECIPE_STATUS_CHOICES,
+        choices=RECIPE_IS_IN,
         method='get_is_in'
     )
     is_favorited = ChoiceFilter(
-        choices=RECIPE_STATUS_CHOICES,
+        choices=RECIPE_IS_IN,
         method='get_is_in'
     )
 

@@ -4,9 +4,8 @@ from django_filters.rest_framework import DjangoFilterBackend
 from django.http import FileResponse, JsonResponse
 from django.shortcuts import get_object_or_404
 from django.conf import settings
-from rest_framework import filters, mixins, status, viewsets
+from rest_framework import filters, status, viewsets
 from rest_framework.decorators import action
-from rest_framework.permissions import IsAuthenticatedOrReadOnly
 from rest_framework.response import Response
 
 from .filters import FirstLetterFilter, RecipeFilter
@@ -17,6 +16,7 @@ from .models import (Favorite,
                      Tag,
                      ShoppingCart,
                      ShortLinkRecipe)
+from .paginations import PageLimitPagination
 from .permissions import AuthorOrReadOnly
 from .serializers import (IngredientSerializer,
                           RecipeSerializer,
@@ -53,6 +53,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
     queryset = Recipe.objects.all()
     serializer_class = RecipeSerializer
     permission_classes = (AuthorOrReadOnly,)
+    pagination_class = PageLimitPagination
     filter_backends = (DjangoFilterBackend,)
     filterset_class = RecipeFilter
 
@@ -161,7 +162,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
 
         response = FileResponse(open(file_path, 'rb'))
         response['Content-Disposition'] = (
-            f'attachment; ',
+            'attachment; ',
             f'filename="Список_покупок_{request.user.username}.txt"'
         )
         return response

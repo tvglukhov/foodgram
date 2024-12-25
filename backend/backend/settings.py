@@ -1,15 +1,17 @@
 import os
-
-from datetime import timedelta
 from pathlib import Path
+
+from dotenv import load_dotenv
+
+load_dotenv()
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = 'django-insecure-_mx&9&q*774uzt1w5ri3)raj&##dlw*m9439qb+9a08ysgdsjs'
+SECRET_KEY = os.getenv('SECRET_KEY', 'default')
 
-DEBUG = True
+DEBUG = os.getenv('DEBUG').lower() == 'true'
 
-ALLOWED_HOSTS = ['*']
+ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS').split(' ')
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -22,7 +24,6 @@ INSTALLED_APPS = [
     'django_filters',
     'rest_framework.authtoken',
     'djoser',
-    'api.apps.ApiConfig',
     'users.apps.UsersConfig',
     'recipes.apps.RecipesConfig',
 ]
@@ -62,8 +63,12 @@ WSGI_APPLICATION = 'backend.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': os.getenv('POSTGRES_DB', 'database'),
+        'USER': os.getenv('POSTGRES_USER', 'user'),
+        'PASSWORD': os.getenv('POSTGRES_PASSWORD', ''),
+        'HOST': os.getenv('DB_HOST', ''),
+        'PORT': os.getenv('DB_PORT', 5432)
     }
 }
 
@@ -101,7 +106,7 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 
 STATIC_URL = '/static/'
-STATICFILES_DIRS = ((BASE_DIR / 'static/'),)
+STATIC_ROOT = BASE_DIR / 'collected_static'
 
 # Media files
 

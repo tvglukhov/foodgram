@@ -25,15 +25,20 @@ class Subscribe(models.Model):
     user = models.ForeignKey(
         FoodgramUser,
         on_delete=models.CASCADE,
-        related_name='subscribers'
+        related_name='subscribers',
+        verbose_name='Пользователь'
     )
     subscribing = models.ForeignKey(
         FoodgramUser,
         on_delete=models.CASCADE,
-        related_name='subscribtions'
+        related_name='subscribtions',
+        verbose_name='Подписка на'
     )
 
     class Meta:
-        verbose_name = 'Подписка'
+        verbose_name = 'Подписка на'
         verbose_name_plural = 'Подписки'
         unique_together = ('user', 'subscribing')
+
+    def __str__(self):
+        return self.subscribing.username

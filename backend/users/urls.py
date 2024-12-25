@@ -1,7 +1,7 @@
 from django.urls import include, path
 from rest_framework.routers import SimpleRouter
 
-from . import permissions, views
+from . import views
 
 
 app_name = 'users'
