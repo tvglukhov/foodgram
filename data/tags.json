@@ -1,0 +1,16 @@
+[{
+    "name": "Завтрак",
+    "slug": "Breakfast"
+},
+{
+    "name": "Ужин",
+    "slug": "Dinner"
+},
+{
+    "name": "Обед",
+    "slug": "Lunch"
+},
+{
+    "name": "Десерт",
+    "slug": "Dessert"
+}]
