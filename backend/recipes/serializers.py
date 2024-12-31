@@ -130,21 +130,21 @@ class RecipeSerializer(serializers.ModelSerializer):
 
         return data
 
-    def get_is_in_shopping_cart(self, recipe):
-        """Возвращает True, если рецепт добавлен в Список покупок."""
+    def is_recipe_in(self, model, recipe):
+        """Возвращает True, если рецепт добавлен в модель."""
         user = self.context.get('request').user
         if user.is_anonymous:
             return False
-        return ShoppingCart.objects.filter(recipe=recipe,
-                                           user=user).exists()
+        return model.objects.filter(recipe=recipe,
+                                    user=user).exists()
+
+    def get_is_in_shopping_cart(self, recipe):
+        """Возвращает True, если рецепт добавлен в Список покупок."""
+        return self.is_recipe_in(ShoppingCart, recipe)
 
     def get_is_favorited(self, recipe):
         """Возвращает True, если рецепт добавлен в Избранное."""
-        user = self.context.get('request').user
-        if user.is_anonymous:
-            return False
-        return Favorite.objects.filter(recipe=recipe,
-                                       user=user).exists()
+        return self.is_recipe_in(Favorite, recipe)
 
     def create_ingredients(self, ingredients, recipe):
         """Создание списка Ингредиентов в рецепте."""
