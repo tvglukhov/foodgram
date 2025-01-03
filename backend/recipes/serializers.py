@@ -75,7 +75,7 @@ class RecipeSerializer(serializers.ModelSerializer):
         queryset=Tag.objects.all(),
         many=True
     )
-    image = Base64ImageField(required=False, allow_null=True)
+    image = Base64ImageField()
     is_in_shopping_cart = serializers.SerializerMethodField(read_only=True)
     is_favorited = serializers.SerializerMethodField(read_only=True)
     author = AuthorSerializer(read_only=True)
@@ -90,18 +90,15 @@ class RecipeSerializer(serializers.ModelSerializer):
 
     def validate(self, data):
         """Валидация запроса на создание Рецепта."""
+
         ingredients = data.get('recipe_ingredient')
         tags = data.get('tags')
-        image = data.get('image')
         cooking_time = data.get('cooking_time')
 
         if not ingredients:
             raise ValidationError
 
         if not tags:
-            raise ValidationError
-
-        if not image:
             raise ValidationError
 
         for ingredient in ingredients:
@@ -168,22 +165,24 @@ class RecipeSerializer(serializers.ModelSerializer):
         return recipe
 
     def update(self, instance, validated_data):
-        instance.name = validated_data.get('name', instance.name)
-        instance.text = validated_data.get('text', instance.text)
-        instance.image = validated_data.get('image', instance.image)
-        instance.cooking_time = validated_data.get(
-            'cooking_time',
-            instance.cooking_time)
-        instance.tags.set(validated_data.get('tags'))
-
-        instance.ingredients.clear()
+        """Редактирование рецепта."""
+        recipe = instance
+        print(f'Рецепт: {recipe}')
+        tags = validated_data.pop('tags')
+        print(f'Тэги: {tags}')
+        ingredients = validated_data.pop('recipe_ingredient')
+        print(f'Ингредиенты: {ingredients}')
+        RecipeIngredient.objects.filter(recipe=recipe).delete()
 
         self.create_ingredients(
-            validated_data.get('recipe_ingredient'),
-            instance
+            ingredients,
+            recipe
         )
-        instance.save()
-        return instance
+
+        updated_instance = super().update(instance, validated_data)
+        updated_instance.tags.set(tags)
+
+        return updated_instance
 
     def to_representation(self, instance):
         """Переопределение вывода Тэгов при создании рецепта."""

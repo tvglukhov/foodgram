@@ -1,9 +1,8 @@
 import os
 
 from django_filters.rest_framework import DjangoFilterBackend
-from django.http import FileResponse, JsonResponse
+from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404
-from django.conf import settings
 from rest_framework import filters, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -118,7 +117,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
     @action(
         detail=False,
         url_path='download_shopping_cart',
-        methods=('GET',),
+        methods=('get',),
         permission_classes=(AuthorOrReadOnly,)
     )
     def download_shopping_cart(self, request):
@@ -150,20 +149,13 @@ class RecipeViewSet(viewsets.ModelViewSet):
                 f'{ingredients_in_cart[item]["measurement_unit"]}'
             )
 
-        file_path = os.path.join(
-            settings.MEDIA_ROOT,
-            'shopping_lists',
-            f'Список_покупок_{request.user.username}.txt'
+        content = '\n'.join(
+            [f"{key}: {value}" for key, value in shopping_list.items()]
         )
 
-        with open(file_path, 'w', encoding='utf-8') as file:
-            for key, value in shopping_list.items():
-                file.write(f"{key}: {value}\n")
-
-        response = FileResponse(open(file_path, 'rb'))
+        response = HttpResponse(content, content_type='text/plain')
         response['Content-Disposition'] = (
-            'attachment; ',
-            f'filename="Список_покупок_{request.user.username}.txt"'
+            'attachment; filename="Список_покупок.txt"'
         )
         return response
 
@@ -179,5 +171,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
             recipe_id=pk
         )
         return JsonResponse(
-            {"short-link": request.build_absolute_uri(f'/s/{short_link}/')}
+            {"short-link": request.build_absolute_uri(
+                f'/s/{short_link.short_link_code}/'
+            )}
         )
