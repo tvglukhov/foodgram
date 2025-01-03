@@ -13,7 +13,7 @@ DEBUG = os.getenv('DEBUG', 'true').lower() == 'true'
 
 ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost').split(' ')
 
-CSRF_TRUSTED_ORIGINS = ['https://chuvaya.zapto.org/']
+CSRF_TRUSTED_ORIGINS = ['https://chuvaya.zapto.org']
 
 INSTALLED_APPS = [
     'django.contrib.admin',
