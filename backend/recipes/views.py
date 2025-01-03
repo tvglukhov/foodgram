@@ -1,5 +1,3 @@
-import os
-
 from django_filters.rest_framework import DjangoFilterBackend
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404
