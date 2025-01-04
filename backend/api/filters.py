@@ -6,7 +6,7 @@ from django_filters import (AllValuesMultipleFilter,
 from rest_framework import filters
 
 from .constants import RECIPE_IS_IN
-from .models import Recipe
+from recipes.models import Recipe
 
 User = get_user_model()
 

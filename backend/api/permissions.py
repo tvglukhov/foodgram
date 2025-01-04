@@ -1,6 +1,15 @@
 from rest_framework.permissions import BasePermission, SAFE_METHODS
 
 
+class AllowAnyExceptEndpointMe(BasePermission):
+    """Разрешает анонимным всё, кроме эндпоинта /api/user/me/."""
+
+    def has_permission(self, request, view):
+        if request.path == '/api/users/me/' and request.user.is_anonymous:
+            return False
+        return super().has_permission(request, view)
+
+
 class AuthorOrReadOnly(BasePermission):
     """Только чтение, редактирование доступно только автору."""
 

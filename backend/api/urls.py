@@ -4,10 +4,15 @@ from rest_framework.routers import SimpleRouter
 from . import views
 
 
-app_name = 'users'
+app_name = 'api'
 
 router = SimpleRouter()
 router.register(r'users', views.FoodgramUserViewSet)
+router.register(r'recipes', views.RecipeViewSet, basename='recipes')
+router.register(r'ingredients',
+                views.IngridientsViewSet,
+                basename='ingredients')
+router.register(r'tags', views.TagsViewSet, basename='tags')
 
 urlpatterns = [
     path(
