@@ -5,12 +5,10 @@ from django.core.files.base import ContentFile
 from djoser.serializers import UserCreateSerializer, UserSerializer
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
-from rest_framework.validators import UniqueTogetherValidator
 
 from .constants import (INTEGER_FIELD_MAX_VALUE,
                         INTEGER_FIELD_MIN_VALUE,
                         CHAR_FIELD_MAX_LENGTH)
-from users.models import Subscribe
 from recipes.models import (Ingredient,
                             Favorite,
                             Recipe,
