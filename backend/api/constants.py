@@ -1,3 +1,6 @@
+INTEGER_FIELD_MAX_VALUE = 32000
+INTEGER_FIELD_MIN_VALUE = 1
+CHAR_FIELD_MAX_LENGTH = 150
 RECIPE_IS_IN = (
     (0, 'not_is_in'),
     (1, 'is_in'),

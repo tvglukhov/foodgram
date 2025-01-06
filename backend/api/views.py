@@ -1,4 +1,5 @@
 from django.contrib.auth import get_user_model
+from django.db.models import Sum
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect
 from django.views import View
@@ -58,12 +59,11 @@ class FoodgramUserViewSet(UserViewSet):
                             status=status.HTTP_201_CREATED)
 
         if request.method == 'DELETE':
-            subscription = Subscribe.objects.filter(
-                user=user,
-                subscribing=author
-            ).first()
-            if not subscription:
-                return Response(status=status.HTTP_400_BAD_REQUEST)
+            try:
+                subscription = user.subscribers.get(subscribing=author)
+            except Subscribe.DoesNotExist:
+                return Response({'Ошибка': 'Подписка не найдена.'},
+                                status=status.HTTP_400_BAD_REQUEST)
             subscription.delete()
             return Response(status=status.HTTP_204_NO_CONTENT)
 
@@ -146,39 +146,39 @@ class RecipeViewSet(viewsets.ModelViewSet):
         """Автор переопределяется текущим Пользователем."""
         serializer.save(author=self.request.user)
 
-    def add_delete_recipe(self, model, request, pk=None):
-        """Добавление и удаление Рецепта из моделей"""
+    def add_recipe(self, model, request, pk=None):
+        """Добавление Рецепта."""
         recipe = get_object_or_404(Recipe, id=pk)
-
-        if request.method == 'POST':
-            serializer = AddRecipeSerializer(
-                recipe,
-                data=request.data,
-                context={'request': request}
+        serializer = AddRecipeSerializer(
+            recipe,
+            data=request.data,
+            context={'request': request}
+        )
+        serializer.is_valid(raise_exception=True)
+        if model.objects.filter(
+            user=request.user, recipe=recipe
+        ).exists():
+            return Response(status=status.HTTP_400_BAD_REQUEST)
+        model.objects.create(user=request.user, recipe=recipe)
+        modified_data = {
+            **serializer.data,
+            'image': request.build_absolute_uri(
+                recipe.image.url
             )
-            serializer.is_valid(raise_exception=True)
-            if model.objects.filter(
-                user=request.user, recipe=recipe
-            ).exists():
-                return Response(status=status.HTTP_400_BAD_REQUEST)
-            model.objects.create(user=request.user, recipe=recipe)
-            modified_data = {
-                **serializer.data,
-                'image': request.build_absolute_uri(
-                    recipe.image.url
-                )
-            }
-            return Response(modified_data, status=status.HTTP_201_CREATED)
+        }
+        return Response(modified_data, status=status.HTTP_201_CREATED)
 
-        if request.method == 'DELETE':
-            shopping_cart_item = model.objects.filter(
-                user=request.user,
-                recipe=recipe
-            ).first()
-            if not shopping_cart_item:
-                return Response(status=status.HTTP_400_BAD_REQUEST)
-            shopping_cart_item.delete()
-            return Response(status=status.HTTP_204_NO_CONTENT)
+    def delete_recipe(self, model, request, pk=None):
+        """Удаление Рецепта."""
+        recipe = get_object_or_404(Recipe, id=pk)
+        shopping_cart_item = model.objects.filter(
+            user=request.user,
+            recipe=recipe
+        ).first()
+        if not shopping_cart_item:
+            return Response(status=status.HTTP_400_BAD_REQUEST)
+        shopping_cart_item.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
     @action(
         detail=True,
@@ -188,7 +188,10 @@ class RecipeViewSet(viewsets.ModelViewSet):
     )
     def add_delete_shopping_cart(self, request, pk):
         """Добавление и удаление Рецепта из Списка покупок."""
-        return self.add_delete_recipe(ShoppingCart, request, pk)
+        if request.method == 'POST':
+            return self.add_recipe(ShoppingCart, request, pk)
+        if request.method == 'DELETE':
+            return self.delete_recipe(ShoppingCart, request, pk)
 
     @action(
         detail=True,
@@ -198,7 +201,10 @@ class RecipeViewSet(viewsets.ModelViewSet):
     )
     def add_delete_favorite(self, request, pk):
         """Добавление и удаление Рецепта из Избранного."""
-        return self.add_delete_recipe(Favorite, request, pk)
+        if request.method == 'POST':
+            return self.add_recipe(Favorite, request, pk)
+        if request.method == 'DELETE':
+            return self.delete_recipe(Favorite, request, pk)
 
     @action(
         detail=False,
@@ -208,31 +214,23 @@ class RecipeViewSet(viewsets.ModelViewSet):
     )
     def download_shopping_cart(self, request):
         """Скачать корзинку."""
-        user = request.user
-        recipes_in_cart = Recipe.objects.filter(shopping_cart__user=user)
-
-        ingredients_in_cart = {}
-
-        for recipe in recipes_in_cart:
-            recipe_ingredients = RecipeIngredient.objects.filter(recipe=recipe)
-
-            for recipe_ingredient in recipe_ingredients:
-                ingredient = recipe_ingredient.ingredient
-                amount = recipe_ingredient.amount
-                measurement_unit = ingredient.measurement_unit
-
-                if ingredient.name in ingredients_in_cart:
-                    ingredients_in_cart[ingredient.name]['amount'] += amount
-                else:
-                    ingredients_in_cart[ingredient.name] = {
-                        'amount': amount, 'measurement_unit': measurement_unit
-                    }
+        ingredients_in_cart = RecipeIngredient.objects.filter(
+            recipe__shopping_cart__user=request.user
+        ).values(
+            'ingredient__name',
+            'ingredient__measurement_unit',
+        ).annotate(
+            amount=Sum('amount')
+        ).order_by(
+            'ingredient__name'
+        )
+        print(ingredients_in_cart)
 
         shopping_list = {}
         for item in ingredients_in_cart:
-            shopping_list[item] = (
-                f'{ingredients_in_cart[item]["amount"]} '
-                f'{ingredients_in_cart[item]["measurement_unit"]}'
+            shopping_list[item['ingredient__name']] = (
+                f'{item["amount"]} '
+                f'{item["ingredient__measurement_unit"]}'
             )
 
         content = '\n'.join(

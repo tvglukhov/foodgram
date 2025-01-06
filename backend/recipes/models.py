@@ -1,10 +1,14 @@
 import shortuuid
 
 from django.contrib.auth import get_user_model
+from django.core.validators import MinValueValidator, MaxValueValidator
 from django.dispatch import receiver
 from django.db import IntegrityError, models
 
-from .constants import CHARFIELD_MAX_LENGTH, SHORTLINK_MAX_LENGTH
+from .constants import (CHARFIELD_MAX_LENGTH,
+                        INTEGER_FIELD_MAX_VALUE,
+                        INTEGER_FIELD_MIN_VALUE,
+                        SHORTLINK_MAX_LENGTH)
 
 User = get_user_model()
 
@@ -25,6 +29,7 @@ class Tag(models.Model):
     class Meta:
         verbose_name = 'Тэг'
         verbose_name_plural = 'Тэги'
+        ordering = ['name']
 
     def __str__(self):
         return self.name
@@ -44,6 +49,7 @@ class Ingredient(models.Model):
     class Meta:
         verbose_name = 'Ингредиент'
         verbose_name_plural = 'Ингредиенты'
+        ordering = ['name']
 
     def __str__(self):
         return self.name
@@ -69,13 +75,18 @@ class Recipe(models.Model):
                                          verbose_name='Ингредиенты')
     tags = models.ManyToManyField(Tag,
                                   verbose_name='Тэги')
-    cooking_time = models.PositiveIntegerField(
-        verbose_name='Время приготовления (мин)'
+    cooking_time = models.PositiveSmallIntegerField(
+        verbose_name='Время приготовления (мин)',
+        validators=[
+            MinValueValidator(limit_value=INTEGER_FIELD_MIN_VALUE),
+            MaxValueValidator(limit_value=INTEGER_FIELD_MAX_VALUE)
+        ]
     )
 
     class Meta:
         verbose_name = 'Рецепт'
         verbose_name_plural = 'Рецепты'
+        ordering = ['name']
 
     def __str__(self):
         return self.name
@@ -92,11 +103,18 @@ class RecipeIngredient(models.Model):
         on_delete=models.CASCADE,
         verbose_name='Ингредиент'
     )
-    amount = models.FloatField(verbose_name='Кол-во')
+    amount = models.PositiveSmallIntegerField(
+        verbose_name='Кол-во',
+        validators=[
+            MinValueValidator(limit_value=INTEGER_FIELD_MIN_VALUE),
+            MaxValueValidator(limit_value=INTEGER_FIELD_MAX_VALUE)
+        ]
+    )
 
     class Meta:
         verbose_name = 'Ингредиент'
         verbose_name_plural = 'Ингредиенты'
+        ordering = ['recipe']
 
     def __str__(self):
         return f'{self.ingredient.name}, {self.ingredient.measurement_unit}'
@@ -119,6 +137,7 @@ class ShoppingCart(models.Model):
     class Meta:
         verbose_name = 'Рецепт в корзине'
         verbose_name_plural = 'Рецепты в корзине'
+        ordering = ['user']
 
     def __str__(self):
         return self.recipe.name
@@ -141,6 +160,7 @@ class Favorite(models.Model):
     class Meta:
         verbose_name = 'Рецепт в избранном'
         verbose_name_plural = 'Рецепты в избранном'
+        ordering = ['user']
 
     def __str__(self):
         return self.recipe.name
