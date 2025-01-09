@@ -196,7 +196,6 @@ class RecipeSerializer(serializers.ModelSerializer):
 
     def validate(self, data):
         """Валидация запроса на создание Рецепта."""
-        print(data)
         ingredients = data.get('recipe_ingredient')
         tags = data.get('tags')
 
