@@ -150,7 +150,7 @@ class TagSerializer(serializers.ModelSerializer):
 
 class RecipeIngredientSerializer(serializers.ModelSerializer):
     """Сериализатор для записи ингредиентов в рецепт."""
-    id = serializers.IntegerField()
+    id = serializers.IntegerField(source='ingredient.id')
     name = serializers.CharField(
         source='ingredient.name',
         read_only=True
@@ -196,7 +196,6 @@ class RecipeSerializer(serializers.ModelSerializer):
 
     def validate(self, data):
         """Валидация запроса на создание Рецепта."""
-
         ingredients = data.get('recipe_ingredient')
         tags = data.get('tags')
 
@@ -206,7 +205,8 @@ class RecipeSerializer(serializers.ModelSerializer):
         if not tags:
             raise ValidationError('Нельзя создать рецепт без тэгов.')
 
-        ingredient_ids = [ingredient['id'] for ingredient in ingredients]
+        ingredient_ids = [ingredient['ingredient']['id']
+                          for ingredient in ingredients]
         tag_ids = [tag.id for tag in tags]
 
         if (not Ingredient.objects.filter(id__in=ingredient_ids).count()
@@ -246,7 +246,7 @@ class RecipeSerializer(serializers.ModelSerializer):
         recipe_ingredients = []
 
         for ingredient_data in ingredients:
-            ingredient_id = ingredient_data['id']
+            ingredient_id = ingredient_data['ingredient']['id']
             ingredient = Ingredient.objects.get(id=ingredient_id)
             amount = ingredient_data['amount']
             recipe_ingredients.append(RecipeIngredient(

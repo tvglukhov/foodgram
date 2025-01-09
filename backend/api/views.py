@@ -224,7 +224,6 @@ class RecipeViewSet(viewsets.ModelViewSet):
         ).order_by(
             'ingredient__name'
         )
-        print(ingredients_in_cart)
 
         shopping_list = {}
         for item in ingredients_in_cart:
